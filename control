@@ -1,0 +1,9 @@
+Package: com.podpod123.gsaport
+Name: GSAPort
+Version: 1.0
+Architecture: iphoneos-arm
+Description: Ports Apple's GrandSlam Authentication protocol to iOS versions prior to iOS 9. Fixes Apple ID login related endpoints that contain your account credentials. After you receive your verification code, enter ONLY that in the password field. You do NOT need to enter it after your password.
+Maintainer: Pod <pod@podpod123.com>
+Author: Pod <pod@podpod123.com>
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 6.0), firmware (<< 9.0)
