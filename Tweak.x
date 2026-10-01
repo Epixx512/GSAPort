@@ -1086,14 +1086,14 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         }
 
         if (isIMFT) {
-            NSDictionary *delegatesBody = @{@"apple-id": adsid, @"client-id": @"", @"delegates": @{@"com.apple.madrid": @{}}, @"password": pet};
-            NSData *delegatesData = [NSPropertyListSerialization dataWithPropertyList:delegatesBody format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+            NSString *delegatesXML = [NSString stringWithFormat:@"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n\t<dict>\n\t\t<key>apple-id</key>\n\t\t<string>%@</string>\n\t\t<key>client-id</key>\n\t\t<string/>\n\t\t<key>delegates</key>\n\t\t<dict>\n\t\t\t<key>com.apple.madrid</key>\n\t\t\t<dict/>\n\t\t</dict>\n\t\t<key>password</key>\n\t\t<string>%@</string>\n\t</dict>\n</plist>", adsid, pet];
+            NSData *delegatesData = [delegatesXML dataUsingEncoding:NSUTF8StringEncoding];
 
             NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://setup.icloud.com/setup/iosbuddy/loginDelegates"]];
             [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:req];
             req.HTTPMethod = @"POST";
             req.HTTPBody = delegatesData;
-            [req setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
+            [req setValue:@"text/plist" forHTTPHeaderField:@"Content-Type"];
             [req setValue:@"<iPhone4,1> <iPhone OS;6.1.3;10B329> <com.apple.AppleAccount/1.0 (com.apple.Accounts/113)>" forHTTPHeaderField:@"X-MMe-Client-Info"];
             for (NSString *key in self.request.allHTTPHeaderFields) {
                 NSString *lower = [key lowercaseString];
@@ -1104,11 +1104,35 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 
             NSURLResponse *response = nil;
             NSError *error = nil;
+
+            NSMutableString *rawRequestLog = [NSMutableString string];
+            [rawRequestLog appendFormat:@"%@ %@ HTTP/1.1\n", req.HTTPMethod, req.URL.path];
+            [rawRequestLog appendFormat:@"Host: %@\n", req.URL.host];
+            for (NSString *key in req.allHTTPHeaderFields) {
+                [rawRequestLog appendFormat:@"%@: %@\n", key, [req valueForHTTPHeaderField:key]];
+            }
+            [rawRequestLog appendFormat:@"Content-Length: %lu\n", (unsigned long)req.HTTPBody.length];
+            [rawRequestLog appendString:@"\n"];
+            NSString *bodyStrLog = [[NSString alloc] initWithData:req.HTTPBody encoding:NSUTF8StringEncoding];
+            [rawRequestLog appendString:bodyStrLog ?: @"<non-utf8 body>"];
+            NSLog(@"[GSAPort] logindelegates raw req:\n%@", rawRequestLog);
+
             NSData *data = [NSURLConnection sendSynchronousRequest:req returningResponse:&response error:&error];
             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
             if (!httpResponse && data) {
                 httpResponse = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
             }
+
+            NSLog(@"[GSAPort] logindelegates connection error: %@", error);
+            NSMutableString *rawResponseLog = [NSMutableString string];
+            [rawResponseLog appendFormat:@"HTTP/1.1 %ld\n", (long)httpResponse.statusCode];
+            for (NSString *key in httpResponse.allHeaderFields) {
+                [rawResponseLog appendFormat:@"%@: %@\n", key, httpResponse.allHeaderFields[key]];
+            }
+            [rawResponseLog appendString:@"\n"];
+            NSString *respBodyStrLog = data ? ([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] ?: @"<non-utf8 or binary body>") : @"<no data>";
+            [rawResponseLog appendString:respBodyStrLog];
+            NSLog(@"[GSAPort] logindelegates raw resp:\n%@", rawResponseLog);
 
             if (!data) {
                 NSHTTPURLResponse *failResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:502 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
