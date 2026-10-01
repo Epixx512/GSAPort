@@ -1085,15 +1085,72 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             return;
         }
 
-        if (isIMFT || isGC) {
+        if (isIMFT) {
+            NSDictionary *delegatesBody = @{@"apple-id": adsid, @"client-id": @"", @"delegates": @{@"com.apple.madrid": @{}}, @"password": pet};
+            NSData *delegatesData = [NSPropertyListSerialization dataWithPropertyList:delegatesBody format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+
+            NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://setup.icloud.com/setup/iosbuddy/loginDelegates"]];
+            [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:req];
+            req.HTTPMethod = @"POST";
+            req.HTTPBody = delegatesData;
+            [req setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
+            [req setValue:@"<iPhone4,1> <iPhone OS;6.1.3;10B329> <com.apple.AppleAccount/1.0 (com.apple.Accounts/113)>" forHTTPHeaderField:@"X-MMe-Client-Info"];
+            for (NSString *key in self.request.allHTTPHeaderFields) {
+                NSString *lower = [key lowercaseString];
+                if (![lower isEqualToString:@"host"] && ![lower isEqualToString:@"content-length"] && ![lower isEqualToString:@"content-encoding"] && ![lower isEqualToString:@"x-mme-client-info"] && ![lower isEqualToString:@"content-type"]) {
+                    [req setValue:[self.request valueForHTTPHeaderField:key] forHTTPHeaderField:key];
+                }
+            }
+
+            NSURLResponse *response = nil;
+            NSError *error = nil;
+            NSData *data = [NSURLConnection sendSynchronousRequest:req returningResponse:&response error:&error];
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            if (!httpResponse && data) {
+                httpResponse = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
+            }
+
+            if (!data) {
+                NSHTTPURLResponse *failResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:502 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
+                [self.client URLProtocol:self didReceiveResponse:failResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+                [self.client URLProtocolDidFinishLoading:self];
+                return;
+            }
+
+            NSDictionary *parsed = [NSPropertyListSerialization propertyListWithData:data options:0 format:NULL error:nil];
+            NSDictionary *serviceData = parsed[@"delegates"][@"com.apple.madrid"][@"service-data"];
+            NSString *authToken = serviceData[@"auth-token"];
+            NSString *profileId = serviceData[@"profile-id"];
+            NSDictionary *selfHandle = serviceData[@"self-handle"];
+
+            if (!authToken) {
+                NSHTTPURLResponse *failResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:401 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
+                [self.client URLProtocol:self didReceiveResponse:failResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+                [self.client URLProtocolDidFinishLoading:self];
+                return;
+            }
+
+            NSMutableDictionary *responseDict = [NSMutableDictionary dictionary];
+            responseDict[@"status"] = @0;
+            responseDict[@"auth-token"] = authToken;
+            if (profileId) responseDict[@"profile-id"] = profileId;
+            if (selfHandle) responseDict[@"self-handle"] = selfHandle;
+            NSData *responseData = [NSPropertyListSerialization dataWithPropertyList:responseDict format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+
+            NSHTTPURLResponse *okResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type": @"application/xml"}];
+            [self.client URLProtocol:self didReceiveResponse:okResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+            [self.client URLProtocol:self didLoadData:responseData];
+            [self.client URLProtocolDidFinishLoading:self];
+            return;
+        }
+
+        if (isGC) {
             NSMutableDictionary *substitutedDict = [[NSPropertyListSerialization propertyListWithData:originalBody options:0 format:NULL error:nil] mutableCopy];
             substitutedDict[@"username"] = adsid;
             substitutedDict[@"password"] = pet;
             NSData *substituted = [NSPropertyListSerialization dataWithPropertyList:substitutedDict format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
 
-            NSString *urlStr = isIMFT ? @"https://profile.ess.apple.com/WebObjects/VCProfileService.woa/wa/authenticateUser" : @"https://profile.gc.apple.com/WebObjects/GKProfileService.woa/wa/authenticateUser";
-
-            NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:urlStr]];
+            NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://profile.gc.apple.com/WebObjects/GKProfileService.woa/wa/authenticateUser"]];
             [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:req];
             req.HTTPMethod = @"POST";
             req.HTTPBody = substituted;
@@ -1124,8 +1181,8 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             }
 
             NSMutableDictionary *outHeaders = [NSMutableDictionary dictionary];
-            if (httpResponse.allHeaderFields[@"Content-Type"]) outHeaders[@"Content-Type"] = httpResponse.allHeaderFields[@"Content-Type"];
-            if (httpResponse.allHeaderFields[@"Content-Encoding"]) outHeaders[@"Content-Encoding"] = httpResponse.allHeaderFields[@"Content-Encoding"];
+            if ([httpResponse.allHeaderFields objectForKey:@"Content-Type"]) [outHeaders setObject:[httpResponse.allHeaderFields objectForKey:@"Content-Type"] forKey:@"Content-Type"];
+            if ([httpResponse.allHeaderFields objectForKey:@"Content-Encoding"]) [outHeaders setObject:[httpResponse.allHeaderFields objectForKey:@"Content-Encoding"] forKey:@"Content-Encoding"];
 
             NSHTTPURLResponse *okResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:httpResponse.statusCode HTTPVersion:@"HTTP/1.1" headerFields:outHeaders];
             [self.client URLProtocol:self didReceiveResponse:okResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
