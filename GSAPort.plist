@@ -14,6 +14,7 @@
         <array>
             <string>accountsd</string>
 	    <string>gamed</string>
+	    <string>imagent</string>
         </array>
     </dict>
 </dict>
