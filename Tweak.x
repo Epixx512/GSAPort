@@ -1,11 +1,37 @@
 #import <Foundation/Foundation.h>
 #import <CommonCrypto/CommonCrypto.h>
 #import <IOKit/IOKitLib.h>
+#import <zlib.h>
 #include <openssl/bn.h>
 #include <openssl/crypto.h>
 #include <openssl/rand.h>
 #include <stdlib.h>
 #include <string.h>
+
+static NSData *gunzipData(NSData *data) {
+    if (!data || data.length < 2) return data;
+    const uint8_t *bytes = data.bytes;
+    if (bytes[0] != 0x1f || bytes[1] != 0x8b) return data;
+    z_stream stream;
+    memset(&stream, 0, sizeof(stream));
+    stream.next_in = (Bytef *)data.bytes;
+    stream.avail_in = (uInt)data.length;
+    if (inflateInit2(&stream, 15 + 32) != Z_OK) return data;
+    NSMutableData *output = [NSMutableData dataWithLength:data.length * 4];
+    int status = Z_OK;
+    while (status == Z_OK) {
+        if (stream.total_out >= output.length) {
+            [output increaseLengthBy:data.length];
+        }
+        stream.next_out = (Bytef *)output.mutableBytes + stream.total_out;
+        stream.avail_out = (uInt)(output.length - stream.total_out);
+        status = inflate(&stream, Z_NO_FLUSH);
+    }
+    inflateEnd(&stream);
+    if (status != Z_STREAM_END) return data;
+    [output setLength:stream.total_out];
+    return output;
+}
 
 static int srp_initialized = 0;
 
@@ -305,6 +331,7 @@ static NSDictionary *fetchAnisetteFresh(void) {
     CFStringRef uuidCf = (CFStringRef)IORegistryEntryCreateCFProperty(platformExpert, CFSTR(kIOPlatformUUIDKey), kCFAllocatorDefault, 0);
     NSString *deviceUuid = (__bridge_transfer NSString *)uuidCf;
     IOObjectRelease(platformExpert);
+    NSLog(@"[GSAPort] getting anisette; udid is %@", deviceUuid);
     uint32_t t = (uint32_t)([[NSDate date] timeIntervalSince1970] + 180.0);
     uint8_t tbytes[4] = {(uint8_t)(t & 0xFF), (uint8_t)((t >> 8) & 0xFF), (uint8_t)((t >> 16) & 0xFF), (uint8_t)((t >> 24) & 0xFF)};
     NSString *hostAndPath = [NSString stringWithFormat:@"icloud.podpod123.com/anisette.php?%@", deviceUuid];
@@ -408,6 +435,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
     BOOL isFMFGeneric = [host hasSuffix:@"fmfmobile.icloud.com"];
     BOOL isAccountSettingsDirect = [host isEqualToString:@"setup.icloud.com"] && [path isEqualToString:@"/setup/get_account_settings"];
     BOOL isBrokenAuthenticateURL = [host isEqualToString:@"setup.icloud.com"] && [path isEqualToString:@"/setup/authenticate/$APPLE_ID$"];
+    NSLog(@"[GSAPort] url: %@", request.URL.absoluteString);
 
     if (isFMFGeneric) {
         NSOperationQueue *fmfQueue = [[NSOperationQueue alloc] init];
@@ -585,7 +613,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 
     NSString *username = nil;
     NSString *submittedPassword = nil;
-    NSData *originalBody = request.HTTPBody;
+    NSData *originalBody = gunzipData(request.HTTPBody);
 
     if (isICloudLogin || isFMIPInit || isBrokenAuthenticateURL) {
         NSString *authHeader = [request valueForHTTPHeaderField:@"Authorization"];
@@ -611,6 +639,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         return;
     }
 
+    NSLog(@"[GSAPort] read user/pass");
     if (isFMIPInit && username.length > 0 && [username rangeOfCharacterFromSet:[[NSCharacterSet decimalDigitCharacterSet] invertedSet]].location == NSNotFound) {
         NSOperationQueue *cachedQueue = [[NSOperationQueue alloc] init];
         [cachedQueue addOperationWithBlock:^{
@@ -729,6 +758,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         [initReq setValue:@"<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
         [initReq setValue:cpd[@"X-Apple-I-MD-M"] forHTTPHeaderField:@"X-Apple-I-MD-M"];
         [initReq setValue:cpd[@"X-Mme-Device-Id"] forHTTPHeaderField:@"X-Mme-Device-Id"];
+        NSLog(@"[GSAPort] making gsa init request");
         NSURLResponse *initResponse = nil;
         NSError *initError = nil;
         NSData *initData = [NSURLConnection sendSynchronousRequest:initReq returningResponse:&initResponse error:&initError];
@@ -790,6 +820,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         [completeReq setValue:@"<MacBookPro13,2> <macOS;13.1;22C65> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
         [completeReq setValue:cpdComplete[@"X-Apple-I-MD-M"] forHTTPHeaderField:@"X-Apple-I-MD-M"];
         [completeReq setValue:cpdComplete[@"X-Mme-Device-Id"] forHTTPHeaderField:@"X-Mme-Device-Id"];
+        NSLog(@"[GSAPort] making gsa complete request");
         NSURLResponse *completeResponse = nil;
         NSError *completeError = nil;
         NSData *completeData = [NSURLConnection sendSynchronousRequest:completeReq returningResponse:&completeResponse error:&completeError];
@@ -1086,7 +1117,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         }
 
         if (isIMFT) {
-            NSString *delegatesXML = [NSString stringWithFormat:@"<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n\t<dict>\n\t\t<key>apple-id</key>\n\t\t<string>%@</string>\n\t\t<key>client-id</key>\n\t\t<string/>\n\t\t<key>delegates</key>\n\t\t<dict>\n\t\t\t<key>com.apple.madrid</key>\n\t\t\t<dict/>\n\t\t</dict>\n\t\t<key>password</key>\n\t\t<string>%@</string>\n\t</dict>\n</plist>", adsid, pet];
+            NSString *delegatesXML = [NSString stringWithFormat:@"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n\t<dict>\n\t\t<key>apple-id</key>\n\t\t<string>%@</string>\n\t\t<key>client-id</key>\n\t\t<string/>\n\t\t<key>delegates</key>\n\t\t<dict>\n\t\t\t<key>com.apple.madrid</key>\n\t\t\t<dict/>\n\t\t</dict>\n\t\t<key>password</key>\n\t\t<string>%@</string>\n\t</dict>\n</plist>", adsid, pet];
             NSData *delegatesData = [delegatesXML dataUsingEncoding:NSUTF8StringEncoding];
 
             NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://setup.icloud.com/setup/iosbuddy/loginDelegates"]];
@@ -1095,9 +1126,10 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             req.HTTPBody = delegatesData;
             [req setValue:@"text/plist" forHTTPHeaderField:@"Content-Type"];
             [req setValue:@"<iPhone4,1> <iPhone OS;6.1.3;10B329> <com.apple.AppleAccount/1.0 (com.apple.Accounts/113)>" forHTTPHeaderField:@"X-MMe-Client-Info"];
+            [req setValue:@"Accounts/113 CFNetwork/609.1.4 Darwin/13.0.0" forHTTPHeaderField:@"User-Agent"];
             for (NSString *key in self.request.allHTTPHeaderFields) {
                 NSString *lower = [key lowercaseString];
-                if (![lower isEqualToString:@"host"] && ![lower isEqualToString:@"content-length"] && ![lower isEqualToString:@"content-encoding"] && ![lower isEqualToString:@"x-mme-client-info"] && ![lower isEqualToString:@"content-type"]) {
+                if (![lower isEqualToString:@"host"] && ![lower isEqualToString:@"content-length"] && ![lower isEqualToString:@"content-encoding"] && ![lower isEqualToString:@"x-mme-client-info"] && ![lower isEqualToString:@"content-type"] && ![lower isEqualToString:@"user-agent"]) {
                     [req setValue:[self.request valueForHTTPHeaderField:key] forHTTPHeaderField:key];
                 }
             }
@@ -1105,34 +1137,12 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             NSURLResponse *response = nil;
             NSError *error = nil;
 
-            NSMutableString *rawRequestLog = [NSMutableString string];
-            [rawRequestLog appendFormat:@"%@ %@ HTTP/1.1\n", req.HTTPMethod, req.URL.path];
-            [rawRequestLog appendFormat:@"Host: %@\n", req.URL.host];
-            for (NSString *key in req.allHTTPHeaderFields) {
-                [rawRequestLog appendFormat:@"%@: %@\n", key, [req valueForHTTPHeaderField:key]];
-            }
-            [rawRequestLog appendFormat:@"Content-Length: %lu\n", (unsigned long)req.HTTPBody.length];
-            [rawRequestLog appendString:@"\n"];
-            NSString *bodyStrLog = [[NSString alloc] initWithData:req.HTTPBody encoding:NSUTF8StringEncoding];
-            [rawRequestLog appendString:bodyStrLog ?: @"<non-utf8 body>"];
-            NSLog(@"[GSAPort] logindelegates raw req:\n%@", rawRequestLog);
-
+            NSLog(@"[GSAPort] making loginDelegates request");
             NSData *data = [NSURLConnection sendSynchronousRequest:req returningResponse:&response error:&error];
             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
             if (!httpResponse && data) {
                 httpResponse = [[NSHTTPURLResponse alloc] initWithURL:req.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
             }
-
-            NSLog(@"[GSAPort] logindelegates connection error: %@", error);
-            NSMutableString *rawResponseLog = [NSMutableString string];
-            [rawResponseLog appendFormat:@"HTTP/1.1 %ld\n", (long)httpResponse.statusCode];
-            for (NSString *key in httpResponse.allHeaderFields) {
-                [rawResponseLog appendFormat:@"%@: %@\n", key, httpResponse.allHeaderFields[key]];
-            }
-            [rawResponseLog appendString:@"\n"];
-            NSString *respBodyStrLog = data ? ([[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] ?: @"<non-utf8 or binary body>") : @"<no data>";
-            [rawResponseLog appendString:respBodyStrLog];
-            NSLog(@"[GSAPort] logindelegates raw resp:\n%@", rawResponseLog);
 
             if (!data) {
                 NSHTTPURLResponse *failResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:502 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
@@ -1267,5 +1277,6 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 @end
 
 %ctor {
+    NSLog(@"[GSAPort][ctor] loaded into process: %@", [[NSProcessInfo processInfo] processName]);
     [NSURLProtocol registerClass:[GSAPortProtocol class]];
 }
