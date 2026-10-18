@@ -761,7 +761,13 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSLog(@"[GSAPort] making gsa init request");
         NSURLResponse *initResponse = nil;
         NSError *initError = nil;
-        NSData *initData = [NSURLConnection sendSynchronousRequest:initReq returningResponse:&initResponse error:&initError];
+        NSData *initData = nil;
+        for (int initAttempt = 0; initAttempt < 3; initAttempt++) {
+            initData = [NSURLConnection sendSynchronousRequest:initReq returningResponse:&initResponse error:&initError];
+            NSHTTPURLResponse *initHttpResponse = (NSHTTPURLResponse *)initResponse;
+            if (initHttpResponse.statusCode != 503 || initAttempt == 2) break;
+            sleep(3);
+        }
         NSDictionary *initResp = initData ? [NSPropertyListSerialization propertyListWithData:initData options:0 format:NULL error:nil][@"Response"] : nil;
 
         if (!initResp || !initResp[@"sp"]) {
@@ -823,7 +829,13 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSLog(@"[GSAPort] making gsa complete request");
         NSURLResponse *completeResponse = nil;
         NSError *completeError = nil;
-        NSData *completeData = [NSURLConnection sendSynchronousRequest:completeReq returningResponse:&completeResponse error:&completeError];
+        NSData *completeData = nil;
+        for (int completeAttempt = 0; completeAttempt < 3; completeAttempt++) {
+            completeData = [NSURLConnection sendSynchronousRequest:completeReq returningResponse:&completeResponse error:&completeError];
+            NSHTTPURLResponse *completeHttpResponse = (NSHTTPURLResponse *)completeResponse;
+            if (completeHttpResponse.statusCode != 503 || completeAttempt == 2) break;
+            sleep(3);
+        }
         NSDictionary *completeResp = completeData ? [NSPropertyListSerialization propertyListWithData:completeData options:0 format:NULL error:nil][@"Response"] : nil;
 
         if (!completeResp) {
