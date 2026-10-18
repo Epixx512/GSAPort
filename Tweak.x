@@ -762,11 +762,11 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSURLResponse *initResponse = nil;
         NSError *initError = nil;
         NSData *initData = nil;
-        for (int initAttempt = 0; initAttempt < 3; initAttempt++) {
+        for (int initAttempt = 0; initAttempt < 5; initAttempt++) {
             initData = [NSURLConnection sendSynchronousRequest:initReq returningResponse:&initResponse error:&initError];
             NSHTTPURLResponse *initHttpResponse = (NSHTTPURLResponse *)initResponse;
-            if (initHttpResponse.statusCode != 503 || initAttempt == 2) break;
-            sleep(5);
+            if (initHttpResponse.statusCode != 503 || initAttempt == 4) break;
+            sleep(7);
         }
         NSDictionary *initResp = initData ? [NSPropertyListSerialization propertyListWithData:initData options:0 format:NULL error:nil][@"Response"] : nil;
 
@@ -814,7 +814,8 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSMutableDictionary *completeInner = [NSMutableDictionary dictionaryWithDictionary:@{@"c": continuation, @"M1": mData, @"u": username, @"o": @"complete"}];
         completeInner[@"cpd"] = cpd;
         NSData *completePlistData = [NSPropertyListSerialization dataWithPropertyList:@{@"Header": @{@"Version": @"1.0.1"}, @"Request": completeInner} format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
-        NSDictionary *cpdComplete = fetchAnisetteFresh() ?: cpd;
+        NSDictionary *cpdComplete = cpd;
+        sleep(1);
 
         NSMutableURLRequest *completeReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://gsa.apple.com/grandslam/GsService2"]];
         [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:completeReq];
@@ -830,11 +831,11 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSURLResponse *completeResponse = nil;
         NSError *completeError = nil;
         NSData *completeData = nil;
-        for (int completeAttempt = 0; completeAttempt < 3; completeAttempt++) {
+        for (int completeAttempt = 0; completeAttempt < 5; completeAttempt++) {
             completeData = [NSURLConnection sendSynchronousRequest:completeReq returningResponse:&completeResponse error:&completeError];
             NSHTTPURLResponse *completeHttpResponse = (NSHTTPURLResponse *)completeResponse;
-            if (completeHttpResponse.statusCode != 503 || completeAttempt == 2) break;
-            sleep(5);
+            if (completeHttpResponse.statusCode != 503 || completeAttempt == 4) break;
+            sleep(7);
         }
         NSDictionary *completeResp = completeData ? [NSPropertyListSerialization propertyListWithData:completeData options:0 format:NULL error:nil][@"Response"] : nil;
 
