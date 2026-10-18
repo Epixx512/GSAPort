@@ -763,6 +763,9 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSError *initError = nil;
         NSData *initData = nil;
         for (int initAttempt = 0; initAttempt < 3; initAttempt++) {
+            if (initAttempt > 0) {
+                [initReq setValue:@"close" forHTTPHeaderField:@"Connection"];
+            }
             initData = [NSURLConnection sendSynchronousRequest:initReq returningResponse:&initResponse error:&initError];
             NSHTTPURLResponse *initHttpResponse = (NSHTTPURLResponse *)initResponse;
             if (initHttpResponse.statusCode != 503 || initAttempt == 2) break;
@@ -831,6 +834,9 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSError *completeError = nil;
         NSData *completeData = nil;
         for (int completeAttempt = 0; completeAttempt < 3; completeAttempt++) {
+            if (completeAttempt > 0) {
+                [completeReq setValue:@"close" forHTTPHeaderField:@"Connection"];
+            }
             completeData = [NSURLConnection sendSynchronousRequest:completeReq returningResponse:&completeResponse error:&completeError];
             NSHTTPURLResponse *completeHttpResponse = (NSHTTPURLResponse *)completeResponse;
             if (completeHttpResponse.statusCode != 503 || completeAttempt == 2) break;
