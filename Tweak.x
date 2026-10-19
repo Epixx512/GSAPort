@@ -33,6 +33,30 @@ static NSData *gunzipData(NSData *data) {
     return output;
 }
 
+static NSData *sendRequestFreshConnection(NSURLRequest *request, NSURLResponse **outResponse, NSError **outError) {
+    CFHTTPMessageRef msg = CFHTTPMessageCreateRequest(kCFAllocatorDefault, (__bridge CFStringRef)request.HTTPMethod, (__bridge CFURLRef)request.URL, kCFHTTPVersion1_1);
+    for (NSString *key in request.allHTTPHeaderFields) {
+        CFHTTPMessageSetHeaderFieldValue(msg, (__bridge CFStringRef)key, (__bridge CFStringRef)[request valueForHTTPHeaderField:key]);
+    }
+    if (request.HTTPBody) CFHTTPMessageSetBody(msg, (__bridge CFDataRef)request.HTTPBody);
+    CFReadStreamRef stream = CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, msg);
+    CFRelease(msg);
+    CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPAttemptPersistentConnection, kCFBooleanFalse);
+    CFReadStreamOpen(stream);
+    NSMutableData *data = [NSMutableData data];
+    UInt8 buf[4096];
+    CFIndex n;
+    while ((n = CFReadStreamRead(stream, buf, sizeof(buf))) > 0) [data appendBytes:buf length:n];
+    CFTypeRef resp = CFReadStreamCopyProperty(stream, kCFStreamPropertyHTTPResponseHeader);
+    CFReadStreamClose(stream);
+    if (!resp) { CFRelease(stream); if (outError) *outError = [NSError errorWithDomain:NSURLErrorDomain code:-1 userInfo:nil]; return nil; }
+    NSDictionary *fields = (__bridge_transfer NSDictionary *)CFHTTPMessageCopyAllHeaderFields((CFHTTPMessageRef)resp);
+    if (outResponse) *outResponse = [[NSHTTPURLResponse alloc] initWithURL:request.URL statusCode:CFHTTPMessageGetResponseStatusCode((CFHTTPMessageRef)resp) HTTPVersion:@"HTTP/1.1" headerFields:fields];
+    CFRelease(resp);
+    CFRelease(stream);
+    return data;
+}
+
 static int srp_initialized = 0;
 
 typedef struct { BIGNUM *N; BIGNUM *g; } NGConstant;
@@ -763,7 +787,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSError *initError = nil;
         NSData *initData = nil;
         for (int initAttempt = 0; initAttempt < 5; initAttempt++) {
-            initData = [NSURLConnection sendSynchronousRequest:initReq returningResponse:&initResponse error:&initError];
+            initData = sendRequestFreshConnection(initReq, &initResponse, &initError);
             NSHTTPURLResponse *initHttpResponse = (NSHTTPURLResponse *)initResponse;
             if (initHttpResponse.statusCode != 503 || initAttempt == 4) break;
             sleep(7);
@@ -832,7 +856,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSError *completeError = nil;
         NSData *completeData = nil;
         for (int completeAttempt = 0; completeAttempt < 5; completeAttempt++) {
-            completeData = [NSURLConnection sendSynchronousRequest:completeReq returningResponse:&completeResponse error:&completeError];
+            completeData = sendRequestFreshConnection(completeReq, &completeResponse, &completeError);
             NSHTTPURLResponse *completeHttpResponse = (NSHTTPURLResponse *)completeResponse;
             if (completeHttpResponse.statusCode != 503 || completeAttempt == 4) break;
             sleep(7);
