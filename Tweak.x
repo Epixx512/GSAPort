@@ -930,40 +930,32 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         NSDictionary *statusDict = completeResp[@"Status"];
         NSInteger hsc = [statusDict[@"hsc"] integerValue];
 
-        if (hsc != 200) {
-            NSString *au = statusDict[@"au"];
-            if ([au isEqualToString:@"trustedDeviceSecondaryAuth"] || [au isEqualToString:@"secondaryAuth"]) {
-                NSString *dsid2fa = spd[@"adsid"];
-                NSString *idmsToken2fa = spd[@"GsIdmsToken"];
-                NSString *combined2fa = [NSString stringWithFormat:@"%@:%@", dsid2fa, idmsToken2fa];
-                NSString *identityToken2fa = base64_encode([combined2fa dataUsingEncoding:NSUTF8StringEncoding]);
+        NSString *au = statusDict[@"au"];
+        if (hsc == 409 || [au isEqualToString:@"trustedDeviceSecondaryAuth"] || [au isEqualToString:@"secondaryAuth"]) {
+            NSString *dsid2fa = spd[@"adsid"];
+            NSString *idmsToken2fa = spd[@"GsIdmsToken"];
+            NSString *combined2fa = [NSString stringWithFormat:@"%@:%@", dsid2fa, idmsToken2fa];
+            NSString *identityToken2fa = base64_encode([combined2fa dataUsingEncoding:NSUTF8StringEncoding]);
 
-                NSDictionary *triggerCpd = fetchAnisetteFresh();
+            NSDictionary *triggerCpd = fetchAnisetteFresh();
 
-                NSMutableURLRequest *triggerReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://gsa.apple.com/auth/verify/trusteddevice"]];
-                [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:triggerReq];
-                [triggerReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
-                [triggerReq setValue:@"akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0" forHTTPHeaderField:@"User-Agent"];
-                [triggerReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Accept"];
-                [triggerReq setValue:@"en-us" forHTTPHeaderField:@"Accept-Language"];
-                [triggerReq setValue:identityToken2fa forHTTPHeaderField:@"X-Apple-Identity-Token"];
-                [triggerReq setValue:@"com.apple.gs.xcode.auth" forHTTPHeaderField:@"X-Apple-App-Info"];
-                [triggerReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
-                [triggerReq setValue:@"<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
-                if (triggerCpd) { for (NSString *key in triggerCpd) [triggerReq setValue:triggerCpd[key] forHTTPHeaderField:key]; }
-                NSURLResponse *triggerResponse = nil;
-                NSError *triggerError = nil;
-                [NSURLConnection sendSynchronousRequest:triggerReq returningResponse:&triggerResponse error:&triggerError];
-
-                pendingTwoFactor[username] = @{@"password": realPassword, @"dsid": dsid2fa ?: @"", @"idmsToken": idmsToken2fa ?: @""};
-                NSHTTPURLResponse *needCodeResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:401 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-                [self.client URLProtocol:self didReceiveResponse:needCodeResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-                [self.client URLProtocolDidFinishLoading:self];
-                return;
-            }
-
-            NSHTTPURLResponse *failResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:401 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-            [self.client URLProtocol:self didReceiveResponse:failResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+            NSMutableURLRequest *triggerReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://gsa.apple.com/auth/verify/trusteddevice"]];
+            [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:triggerReq];
+            [triggerReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
+            [triggerReq setValue:@"akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0" forHTTPHeaderField:@"User-Agent"];
+            [triggerReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Accept"];
+            [triggerReq setValue:@"en-us" forHTTPHeaderField:@"Accept-Language"];
+            [triggerReq setValue:identityToken2fa forHTTPHeaderField:@"X-Apple-Identity-Token"];
+            [triggerReq setValue:@"com.apple.gs.xcode.auth" forHTTPHeaderField:@"X-Apple-App-Info"];
+            [triggerReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
+            [triggerReq setValue:@"<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
+            if (triggerCpd) { for (NSString *key in triggerCpd) [triggerReq setValue:triggerCpd[key] forHTTPHeaderField:key]; }
+            NSURLResponse *triggerResponse = nil;
+            NSError *triggerError = nil;
+            [NSURLConnection sendSynchronousRequest:triggerReq returningResponse:&triggerResponse error:&triggerError];
+            pendingTwoFactor[username] = @{@"password": realPassword, @"dsid": dsid2fa ?: @"", @"idmsToken": idmsToken2fa ?: @""};
+            NSHTTPURLResponse *needCodeResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:401 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
+            [self.client URLProtocol:self didReceiveResponse:needCodeResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
             [self.client URLProtocolDidFinishLoading:self];
             return;
         }
