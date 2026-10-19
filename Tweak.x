@@ -42,6 +42,11 @@ static NSData *sendRequestFreshConnection(NSURLRequest *request, NSURLResponse *
     CFReadStreamRef stream = CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, msg);
     CFRelease(msg);
     CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPAttemptPersistentConnection, kCFBooleanFalse);
+    CFDictionaryRef proxySettings = CFNetworkCopySystemProxySettings();
+    if (proxySettings) {
+        CFReadStreamSetProperty(stream, kCFStreamPropertyHTTPProxy, proxySettings);
+        CFRelease(proxySettings);
+    }
     CFReadStreamOpen(stream);
     NSMutableData *data = [NSMutableData data];
     UInt8 buf[4096];
