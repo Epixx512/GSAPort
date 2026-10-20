@@ -361,7 +361,7 @@ static NSDictionary *fetchAnisetteFresh(void) {
     NSString *deviceUuid = (__bridge_transfer NSString *)uuidCf;
     IOObjectRelease(platformExpert);
     NSLog(@"[GSAPort] getting anisette; udid is %@", deviceUuid);
-    uint32_t t = (uint32_t)([[NSDate date] timeIntervalSince1970] + 180.0);
+    uint32_t t = (uint32_t)([[NSDate date] timeIntervalSince1970] + 90.0);
     uint8_t tbytes[4] = {(uint8_t)(t & 0xFF), (uint8_t)((t >> 8) & 0xFF), (uint8_t)((t >> 16) & 0xFF), (uint8_t)((t >> 24) & 0xFF)};
     NSString *hostAndPath = [NSString stringWithFormat:@"icloud.podpod123.com/anisette.php?%@", deviceUuid];
     NSString *secret = @"674822be7c2573ea82ff68e5579f4e5ea770b36609fe7ffe04d983de57fb9607";
