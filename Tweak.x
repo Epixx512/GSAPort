@@ -378,15 +378,15 @@ static NSDictionary *fetchAnisetteFresh(void) {
     for (int i = 0; i < CC_MD5_DIGEST_LENGTH; i++) [podkeyHex appendFormat:@"%02x", round2[i]];
     NSString *podkey = [NSString stringWithFormat:@"%u_%@", t, podkeyHex];
     const char *uuidC = [deviceUuid UTF8String];
-    unsigned char pkBytes[CC_MD5_DIGEST_LENGTH];
-    CC_MD5(uuidC, (CC_LONG)strlen(uuidC), pkBytes);
-    NSMutableString *pk = [NSMutableString string];
-    for (int i = 0; i < CC_MD5_DIGEST_LENGTH; i++) [pk appendFormat:@"%02x", pkBytes[i]];
+    unsigned char tkBytes[CC_MD5_DIGEST_LENGTH];
+    CC_MD5(uuidC, (CC_LONG)strlen(uuidC), tkBytes);
+    NSMutableString *tk = [NSMutableString string];
+    for (int i = 0; i < CC_MD5_DIGEST_LENGTH; i++) [tk appendFormat:@"%02x", tkBytes[i]];
 
     NSMutableURLRequest *anisetteReq = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:@"https://icloud.podpod123.com/anisette.php"]];
     [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:anisetteReq];
     [anisetteReq setValue:deviceUuid forHTTPHeaderField:@"X-Device-Uuid"];
-    [anisetteReq setValue:pk forHTTPHeaderField:@"pk"];
+    [anisetteReq setValue:tk forHTTPHeaderField:@"tk"];
     [anisetteReq setValue:podkey forHTTPHeaderField:@"podkey"];
     NSURLResponse *anisetteResponse = nil;
     NSError *anisetteError = nil;
@@ -743,7 +743,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [submitReq setValue:@"com.apple.gs.xcode.auth" forHTTPHeaderField:@"X-Apple-App-Info"];
             [submitReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
             [submitReq setValue:trailingCode forHTTPHeaderField:@"security-code"];
-            [submitReq setValue:@"<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
+            [submitReq setValue:submitCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
             if (submitCpd) { for (NSString *key in submitCpd) [submitReq setValue:submitCpd[key] forHTTPHeaderField:key]; }
             NSURLResponse *submitResponse = nil;
             NSError *submitError = nil;
@@ -784,7 +784,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         [initReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
         [initReq setValue:@"*/*" forHTTPHeaderField:@"Accept"];
         [initReq setValue:@"akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0" forHTTPHeaderField:@"User-Agent"];
-        [initReq setValue:@"<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
+        [initReq setValue:cpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
         [initReq setValue:cpd[@"X-Apple-I-MD-M"] forHTTPHeaderField:@"X-Apple-I-MD-M"];
         [initReq setValue:cpd[@"X-Mme-Device-Id"] forHTTPHeaderField:@"X-Mme-Device-Id"];
         NSLog(@"[GSAPort] making gsa init request");
@@ -853,7 +853,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         [completeReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
         [completeReq setValue:@"*/*" forHTTPHeaderField:@"Accept"];
         [completeReq setValue:@"akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0" forHTTPHeaderField:@"User-Agent"];
-        [completeReq setValue:@"<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
+        [completeReq setValue:cpdComplete[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
         [completeReq setValue:cpdComplete[@"X-Apple-I-MD-M"] forHTTPHeaderField:@"X-Apple-I-MD-M"];
         [completeReq setValue:cpdComplete[@"X-Mme-Device-Id"] forHTTPHeaderField:@"X-Mme-Device-Id"];
         NSLog(@"[GSAPort] making gsa complete request");
@@ -948,7 +948,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [triggerReq setValue:identityToken2fa forHTTPHeaderField:@"X-Apple-Identity-Token"];
             [triggerReq setValue:@"com.apple.gs.xcode.auth" forHTTPHeaderField:@"X-Apple-App-Info"];
             [triggerReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
-            [triggerReq setValue:@"<PC> <Windows;6.2(0,0);9200> <com.apple.AuthKit/1 (com.apple.akd/1.0)>" forHTTPHeaderField:@"X-Mme-Client-Info"];
+            [triggerReq setValue:triggerCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
             if (triggerCpd) { for (NSString *key in triggerCpd) [triggerReq setValue:triggerCpd[key] forHTTPHeaderField:key]; }
             NSURLResponse *triggerResponse = nil;
             NSError *triggerError = nil;
