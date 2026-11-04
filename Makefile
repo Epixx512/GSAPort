@@ -1,6 +1,6 @@
 TARGET := iphone:clang:7.0:5.0
 INSTALL_TARGET_PROCESSES = Preferences accountsd gamed FindMyiPhone FindMyFriends imagent
-ARCHS = armv7 arm64
+ARCHS = armv7 armv7s arm64
 
 
 include $(THEOS)/makefiles/common.mk
