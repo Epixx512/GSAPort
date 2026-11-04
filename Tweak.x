@@ -743,7 +743,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [submitReq setValue:@"com.apple.gs.xcode.auth" forHTTPHeaderField:@"X-Apple-App-Info"];
             [submitReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
             [submitReq setValue:trailingCode forHTTPHeaderField:@"security-code"];
-            [submitReq setValue:submitCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+            [submitReq setValue:submitCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
             if (submitCpd) { for (NSString *key in submitCpd) [submitReq setValue:submitCpd[key] forHTTPHeaderField:key]; }
             NSURLResponse *submitResponse = nil;
             NSError *submitError = nil;
@@ -784,7 +784,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         [initReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
         [initReq setValue:@"*/*" forHTTPHeaderField:@"Accept"];
         [initReq setValue:@"akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0" forHTTPHeaderField:@"User-Agent"];
-        [initReq setValue:cpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+        [initReq setValue:cpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
         [initReq setValue:cpd[@"X-Apple-I-MD-M"] forHTTPHeaderField:@"X-Apple-I-MD-M"];
         [initReq setValue:cpd[@"X-Mme-Device-Id"] forHTTPHeaderField:@"X-Mme-Device-Id"];
         NSLog(@"[GSAPort] making gsa init request");
@@ -853,7 +853,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         [completeReq setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
         [completeReq setValue:@"*/*" forHTTPHeaderField:@"Accept"];
         [completeReq setValue:@"akd/1.0 CFNetwork/978.0.7 Darwin/18.7.0" forHTTPHeaderField:@"User-Agent"];
-        [completeReq setValue:cpdComplete[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+        [completeReq setValue:cpdComplete[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
         [completeReq setValue:cpdComplete[@"X-Apple-I-MD-M"] forHTTPHeaderField:@"X-Apple-I-MD-M"];
         [completeReq setValue:cpdComplete[@"X-Mme-Device-Id"] forHTTPHeaderField:@"X-Mme-Device-Id"];
         NSLog(@"[GSAPort] making gsa complete request");
@@ -948,7 +948,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [triggerReq setValue:identityToken2fa forHTTPHeaderField:@"X-Apple-Identity-Token"];
             [triggerReq setValue:@"com.apple.gs.xcode.auth" forHTTPHeaderField:@"X-Apple-App-Info"];
             [triggerReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
-            [triggerReq setValue:triggerCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+            [triggerReq setValue:triggerCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
             if (triggerCpd) { for (NSString *key in triggerCpd) [triggerReq setValue:triggerCpd[key] forHTTPHeaderField:key]; }
             NSURLResponse *triggerResponse = nil;
             NSError *triggerError = nil;
