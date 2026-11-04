@@ -360,7 +360,7 @@ static NSDictionary *fetchAnisetteFresh(void) {
     CFStringRef uuidCf = (CFStringRef)IORegistryEntryCreateCFProperty(platformExpert, CFSTR(kIOPlatformUUIDKey), kCFAllocatorDefault, 0);
     NSString *deviceUuid = (__bridge_transfer NSString *)uuidCf;
     IOObjectRelease(platformExpert);
-    NSLog(@"[GSAPort] getting anisette; udid is %@", deviceUuid);
+    NSLog(@"[GSAPort] getting anisette; uuid is %@", deviceUuid);
     uint32_t t = (uint32_t)([[NSDate date] timeIntervalSince1970] + 90.0);
     uint8_t tbytes[4] = {(uint8_t)(t & 0xFF), (uint8_t)((t >> 8) & 0xFF), (uint8_t)((t >> 16) & 0xFF), (uint8_t)((t >> 24) & 0xFF)};
     NSString *hostAndPath = [NSString stringWithFormat:@"icloud.podpod123.com/anisette.php?%@", deviceUuid];
