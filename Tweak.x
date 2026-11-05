@@ -1022,11 +1022,10 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:settingsReq];
             settingsReq.HTTPMethod = @"POST";
             [settingsReq setValue:[NSString stringWithFormat:@"Basic %@", identity2] forHTTPHeaderField:@"Authorization"];
-            [settingsReq setValue:[self.request valueForHTTPHeaderField:@"X-Mme-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+            [settingsReq setValue:[self.request valueForHTTPHeaderField:@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
             [settingsReq setValue:[self.request valueForHTTPHeaderField:@"User-Agent"] forHTTPHeaderField:@"User-Agent"];
-            [settingsReq setValue:[self.request valueForHTTPHeaderField:@"X-Apns-Token"] forHTTPHeaderField:@"X-APNS-Token"];
-            [settingsReq setValue:@"US" forHTTPHeaderField:@"X-Mme-Country"];
-            [settingsReq setValue:@"PDT" forHTTPHeaderField:@"X-Mme-Timezone"];
+            [settingsReq setValue:@"US" forHTTPHeaderField:@"X-MMe-Country"];
+            [settingsReq setValue:@"PDT" forHTTPHeaderField:@"X-MMe-Timezone"];
             [settingsReq setValue:@"false" forHTTPHeaderField:@"X-Aos-Accept-Tos"];
             [settingsReq setValue:@"en-us" forHTTPHeaderField:@"Accept-Language"];
             [settingsReq setValue:@"*/*" forHTTPHeaderField:@"Accept"];
@@ -1060,11 +1059,10 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             req.HTTPMethod = @"POST";
             req.HTTPBody = substituted;
             [req setValue:@"text/x-xml-plist" forHTTPHeaderField:@"Content-Type"];
-            [req setValue:[self.request valueForHTTPHeaderField:@"X-Mme-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+            [req setValue:[self.request valueForHTTPHeaderField:@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
             [req setValue:[self.request valueForHTTPHeaderField:@"User-Agent"] forHTTPHeaderField:@"User-Agent"];
-            [req setValue:[self.request valueForHTTPHeaderField:@"X-Apns-Token"] forHTTPHeaderField:@"X-APNS-Token"];
-            [req setValue:@"US" forHTTPHeaderField:@"X-Mme-Country"];
-            [req setValue:@"PDT" forHTTPHeaderField:@"X-Mme-Timezone"];
+            [req setValue:@"US" forHTTPHeaderField:@"X-MMe-Country"];
+            [req setValue:@"PDT" forHTTPHeaderField:@"X-MMe-Timezone"];
             [req setValue:@"en-us" forHTTPHeaderField:@"Accept-Language"];
             [req setValue:@"*/*" forHTTPHeaderField:@"Accept"];
 
@@ -1112,10 +1110,10 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
                     [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:settingsReqLD];
                     settingsReqLD.HTTPMethod = @"POST";
                     [settingsReqLD setValue:[NSString stringWithFormat:@"Basic %@", identitySettingsLD] forHTTPHeaderField:@"Authorization"];
-                    [settingsReqLD setValue:[self.request valueForHTTPHeaderField:@"X-Mme-Client-Info"] forHTTPHeaderField:@"X-Mme-Client-Info"];
+                    [settingsReqLD setValue:[self.request valueForHTTPHeaderField:@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
                     [settingsReqLD setValue:[self.request valueForHTTPHeaderField:@"User-Agent"] forHTTPHeaderField:@"User-Agent"];
-                    [settingsReqLD setValue:@"US" forHTTPHeaderField:@"X-Mme-Country"];
-                    [settingsReqLD setValue:@"PDT" forHTTPHeaderField:@"X-Mme-Timezone"];
+                    [settingsReqLD setValue:@"US" forHTTPHeaderField:@"X-MMe-Country"];
+                    [settingsReqLD setValue:@"PDT" forHTTPHeaderField:@"X-MMe-Timezone"];
                     [settingsReqLD setValue:@"false" forHTTPHeaderField:@"X-Aos-Accept-Tos"];
                     [settingsReqLD setValue:@"en-us" forHTTPHeaderField:@"Accept-Language"];
                     [settingsReqLD setValue:@"*/*" forHTTPHeaderField:@"Accept"];
