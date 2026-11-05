@@ -745,9 +745,10 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [submitReq setValue:trailingCode forHTTPHeaderField:@"security-code"];
             [submitReq setValue:submitCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
             if (submitCpd) { for (NSString *key in submitCpd) [submitReq setValue:submitCpd[key] forHTTPHeaderField:key]; }
+            NSLog(@"[GSAPort] making gsa validate request");
             NSURLResponse *submitResponse = nil;
             NSError *submitError = nil;
-            [NSURLConnection sendSynchronousRequest:submitReq returningResponse:&submitResponse error:&submitError];
+            sendRequestFreshConnection(submitReq, &submitResponse, &submitError);
             NSHTTPURLResponse *submitHttp = (NSHTTPURLResponse *)submitResponse;
 
             if (submitHttp.statusCode != 200) {
@@ -927,11 +928,13 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             return;
         }
 
+        NSLog(@"[GSAPort] decrypted spd");
         NSDictionary *statusDict = completeResp[@"Status"];
         NSInteger hsc = [statusDict[@"hsc"] integerValue];
 
         NSString *au = statusDict[@"au"];
         if (hsc == 409 || [au isEqualToString:@"trustedDeviceSecondaryAuth"] || [au isEqualToString:@"secondaryAuth"]) {
+            NSLog(@"[GSAPort] verification code required");
             NSString *dsid2fa = spd[@"adsid"];
             NSString *idmsToken2fa = spd[@"GsIdmsToken"];
             NSString *combined2fa = [NSString stringWithFormat:@"%@:%@", dsid2fa, idmsToken2fa];
@@ -950,9 +953,10 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             [triggerReq setValue:@"11.2 (11B41)" forHTTPHeaderField:@"X-Xcode-Version"];
             [triggerReq setValue:triggerCpd[@"X-MMe-Client-Info"] forHTTPHeaderField:@"X-MMe-Client-Info"];
             if (triggerCpd) { for (NSString *key in triggerCpd) [triggerReq setValue:triggerCpd[key] forHTTPHeaderField:key]; }
+            NSLog(@"[GSAPort] triggering code /auth/verify/trusteddevice");
             NSURLResponse *triggerResponse = nil;
             NSError *triggerError = nil;
-            [NSURLConnection sendSynchronousRequest:triggerReq returningResponse:&triggerResponse error:&triggerError];
+            sendRequestFreshConnection(triggerReq, &triggerResponse, &triggerError);
             pendingTwoFactor[username] = @{@"password": realPassword, @"dsid": dsid2fa ?: @"", @"idmsToken": idmsToken2fa ?: @""};
             NSHTTPURLResponse *needCodeResponse = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:401 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
             [self.client URLProtocol:self didReceiveResponse:needCodeResponse cacheStoragePolicy:NSURLCacheStorageNotAllowed];
@@ -961,7 +965,9 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
         }
 
         NSString *pet = spd[@"t"][@"com.apple.gs.idms.pet"][@"token"];
+        NSLog(@"[GSAPort] got PET from spd");
         NSString *adsid = spd[@"adsid"];
+        NSLog(@"[GSAPort] got adsid from spd");
 
         if (isBrokenAuthenticateURL) {
             NSString *identityFix = base64_encode([[NSString stringWithFormat:@"%@:%@", username, pet] dataUsingEncoding:NSUTF8StringEncoding]);
