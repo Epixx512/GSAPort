@@ -300,8 +300,6 @@ static void srp_user_delete(struct SRPUser *usr) {
 }
 
 static NSMutableDictionary *pendingTwoFactor = nil;
-static NSDictionary *cachedAnisette = nil;
-static NSTimeInterval cachedAnisetteFetchedAt = 0;
 
 static NSString *base64_encode(NSData *data) {
     static const char table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
