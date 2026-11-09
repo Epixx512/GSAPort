@@ -394,19 +394,6 @@ static NSDictionary *fetchAnisetteFresh(void) {
     return (anisetteData && !anisetteError) ? [NSJSONSerialization JSONObjectWithData:anisetteData options:0 error:nil] : nil;
 }
 
-static NSDictionary *fetchAnisetteCached(void) {
-    NSTimeInterval now = [[NSDate date] timeIntervalSince1970];
-    if (cachedAnisette && (now - cachedAnisetteFetchedAt) < 300) {
-        return cachedAnisette;
-    }
-    NSDictionary *fresh = fetchAnisetteFresh();
-    if (fresh) {
-        cachedAnisette = fresh;
-        cachedAnisetteFetchedAt = now;
-    }
-    return fresh;
-}
-
 static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, NSData *body, NSURLRequest *headerSource) {
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:url];
     [NSURLProtocol setProperty:@YES forKey:@"GSAPortHandled" inRequest:req];
@@ -540,7 +527,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
                 }
             }
 
-            NSDictionary *cpdAS = tokenNeedsMD ? fetchAnisetteCached() : nil;
+            NSDictionary *cpdAS = tokenNeedsMD ? fetchAnisetteFresh() : nil;
 
             NSMutableURLRequest *reqAS = buildForwardedRequest(request.URL, request.HTTPMethod, request.HTTPBody, request);
             if (cpdAS) { for (NSString *key in cpdAS) [reqAS setValue:cpdAS[key] forHTTPHeaderField:key]; }
