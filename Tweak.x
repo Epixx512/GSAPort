@@ -1175,7 +1175,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
             NSURLResponse *response = nil;
             NSError *error = nil;
 
-            NSLog(@"[GSAPort] making loginDelegates request");
+            NSLog(@"[GSAPort] making loginDelegates request for IM/FT");
             NSData *data = [NSURLConnection sendSynchronousRequest:req returningResponse:&response error:&error];
             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
             if (!httpResponse && data) {
@@ -1237,6 +1237,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
                 [req setValue:@"application/x-apple-plist" forHTTPHeaderField:@"Content-Type"];
             }
 
+            NSLog(@"making modified GC request");
             NSURLResponse *response = nil;
             NSError *error = nil;
             NSData *data = [NSURLConnection sendSynchronousRequest:req returningResponse:&response error:&error];
@@ -1315,6 +1316,8 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 @end
 
 %ctor {
-    NSLog(@"[GSAPort][ctor] loaded into process: %@", [[NSProcessInfo processInfo] processName]);
-    [NSURLProtocol registerClass:[GSAPortProtocol class]];
+    if (kCFCoreFoundationVersionNumber <= 847.27) {
+        NSLog(@"[GSAPort][ctor] loaded into process: %@", [[NSProcessInfo processInfo] processName]);
+        [NSURLProtocol registerClass:[GSAPortProtocol class]];
+    }
 }
