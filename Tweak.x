@@ -513,23 +513,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
     if (isAccountSettingsDirect) {
         NSOperationQueue *asQueue = [[NSOperationQueue alloc] init];
         [asQueue addOperationWithBlock:^{
-            BOOL tokenNeedsMD = NO;
-            NSString *authHeaderAS = [request valueForHTTPHeaderField:@"Authorization"];
-            if ([authHeaderAS hasPrefix:@"Basic "]) {
-                NSData *decodedAS = base64_decode([authHeaderAS substringFromIndex:6]);
-                NSString *decodedStrAS = [[NSString alloc] initWithData:decodedAS encoding:NSUTF8StringEncoding];
-                NSRange colonRangeAS = [decodedStrAS rangeOfString:@":"];
-                if (colonRangeAS.location != NSNotFound) {
-                    NSString *tokenAS = [decodedStrAS substringFromIndex:colonRangeAS.location + 1];
-                    if ([tokenAS hasPrefix:@"E"]) tokenNeedsMD = YES;
-                }
-            }
-
-            NSDictionary *cpdAS = tokenNeedsMD ? fetchAnisetteFresh() : nil;
-
             NSMutableURLRequest *reqAS = buildForwardedRequest(request.URL, request.HTTPMethod, request.HTTPBody, request);
-            if (cpdAS) { for (NSString *key in cpdAS) [reqAS setValue:cpdAS[key] forHTTPHeaderField:key]; }
-
             NSURLResponse *responseAS = nil;
             NSError *errorAS = nil;
             NSData *dataAS = [NSURLConnection sendSynchronousRequest:reqAS returningResponse:&responseAS error:&errorAS];
