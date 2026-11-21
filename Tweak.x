@@ -420,7 +420,6 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
     }
     if ([host isEqualToString:@"profile.ess.apple.com"] && [path isEqualToString:@"/WebObjects/VCProfileService.woa/wa/authenticateUser"]) return YES;
     if ([host isEqualToString:@"profile.gc.apple.com"] && [path isEqualToString:@"/WebObjects/GKProfileService.woa/wa/authenticateUser"]) return YES;
-    if ([host hasSuffix:@".gc.apple.com"]) return YES;
     if ([host hasSuffix:@"fmipmobile.icloud.com"]) return YES;
     if ([host hasSuffix:@"fmfmobile.icloud.com"]) return YES;
     return NO;
@@ -443,7 +442,6 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
     BOOL isLoginDelegates = [host isEqualToString:@"setup.icloud.com"] && [path isEqualToString:@"/setup/iosbuddy/loginDelegates"];
     BOOL isIMFT = [host isEqualToString:@"profile.ess.apple.com"] && [path isEqualToString:@"/WebObjects/VCProfileService.woa/wa/authenticateUser"];
     BOOL isGC = [host isEqualToString:@"profile.gc.apple.com"] && [path isEqualToString:@"/WebObjects/GKProfileService.woa/wa/authenticateUser"];
-    BOOL isGCGeneric = [host hasSuffix:@".gc.apple.com"] && !isGC;
     BOOL isFMIPInit = [host hasSuffix:@"fmipmobile.icloud.com"] && [path rangeOfString:@"/fmipservice/device/"].location != NSNotFound && [path hasSuffix:@"/initClient"];
     BOOL isFMIPGeneric = [host hasSuffix:@"fmipmobile.icloud.com"] && !isFMIPInit;
     BOOL isFMFGeneric = [host hasSuffix:@"fmfmobile.icloud.com"];
@@ -577,33 +575,6 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 
             [self.client URLProtocol:self didReceiveResponse:httpResponseR cacheStoragePolicy:NSURLCacheStorageNotAllowed];
             [self.client URLProtocol:self didLoadData:dataR];
-            [self.client URLProtocolDidFinishLoading:self];
-        }];
-        return;
-    }
-
-    if (isGCGeneric) {
-        NSOperationQueue *gcQueue = [[NSOperationQueue alloc] init];
-        [gcQueue addOperationWithBlock:^{
-            NSMutableURLRequest *reqF = buildForwardedRequest(request.URL, request.HTTPMethod, request.HTTPBody, request);
-
-            NSURLResponse *responseF = nil;
-            NSError *errorF = nil;
-            NSData *dataF = [NSURLConnection sendSynchronousRequest:reqF returningResponse:&responseF error:&errorF];
-            NSHTTPURLResponse *httpResponseF = (NSHTTPURLResponse *)responseF;
-            if (!httpResponseF && dataF) {
-                httpResponseF = [[NSHTTPURLResponse alloc] initWithURL:request.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-            }
-
-            if (!dataF) {
-                NSHTTPURLResponse *failResponseF = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:502 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-                [self.client URLProtocol:self didReceiveResponse:failResponseF cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-                [self.client URLProtocolDidFinishLoading:self];
-                return;
-            }
-
-            [self.client URLProtocol:self didReceiveResponse:httpResponseF cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-            [self.client URLProtocol:self didLoadData:dataF];
             [self.client URLProtocolDidFinishLoading:self];
         }];
         return;
