@@ -1257,7 +1257,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 
 %ctor {
     if (kCFCoreFoundationVersionNumber <= 847.27) {
-        NSLog(@"[GSAPort][ctor] loaded into process: %@", [[NSProcessInfo processInfo] processName]);
+        NSLog(@"[GSAPort] ctor, loaded into process: %@", [[NSProcessInfo processInfo] processName]);
         [NSURLProtocol registerClass:[GSAPortProtocol class]];
     }
 }

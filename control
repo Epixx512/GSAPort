@@ -8,3 +8,4 @@ Author: Pod <pod@podpod123.com>
 Section: Tweaks
 Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 5.0), firmware (<< 8.0)
 Icon: http://repo.podpod123.com/icons/com.podpod123.gsaport.png
+Recommends: com.podpod123.fmipregx
