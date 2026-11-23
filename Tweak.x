@@ -420,8 +420,7 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
     }
     if ([host isEqualToString:@"profile.ess.apple.com"] && [path isEqualToString:@"/WebObjects/VCProfileService.woa/wa/authenticateUser"]) return YES;
     if ([host isEqualToString:@"profile.gc.apple.com"] && [path isEqualToString:@"/WebObjects/GKProfileService.woa/wa/authenticateUser"]) return YES;
-    if ([host hasSuffix:@"fmipmobile.icloud.com"]) return YES;
-    if ([host hasSuffix:@"fmfmobile.icloud.com"]) return YES;
+    if ([host hasSuffix:@"fmipmobile.icloud.com"] && [path rangeOfString:@"/fmipservice/device/"].location != NSNotFound && [path hasSuffix:@"/initClient"]) return YES;
     return NO;
 }
 
@@ -443,70 +442,9 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
     BOOL isIMFT = [host isEqualToString:@"profile.ess.apple.com"] && [path isEqualToString:@"/WebObjects/VCProfileService.woa/wa/authenticateUser"];
     BOOL isGC = [host isEqualToString:@"profile.gc.apple.com"] && [path isEqualToString:@"/WebObjects/GKProfileService.woa/wa/authenticateUser"];
     BOOL isFMIPInit = [host hasSuffix:@"fmipmobile.icloud.com"] && [path rangeOfString:@"/fmipservice/device/"].location != NSNotFound && [path hasSuffix:@"/initClient"];
-    BOOL isFMIPGeneric = [host hasSuffix:@"fmipmobile.icloud.com"] && !isFMIPInit;
-    BOOL isFMFGeneric = [host hasSuffix:@"fmfmobile.icloud.com"];
     BOOL isAccountSettingsDirect = [host isEqualToString:@"setup.icloud.com"] && [path isEqualToString:@"/setup/get_account_settings"];
     BOOL isBrokenAuthenticateURL = [host isEqualToString:@"setup.icloud.com"] && [path isEqualToString:@"/setup/authenticate/$APPLE_ID$"];
     NSLog(@"[GSAPort] url: %@", request.URL.absoluteString);
-
-    if (isFMFGeneric) {
-        NSOperationQueue *fmfQueue = [[NSOperationQueue alloc] init];
-        [fmfQueue addOperationWithBlock:^{
-            NSData *rewrittenBodyFMF = request.HTTPBody;
-            if (request.HTTPBody) {
-                id parsedFMF = [NSJSONSerialization JSONObjectWithData:request.HTTPBody options:0 error:nil];
-                if ([parsedFMF isKindOfClass:[NSDictionary class]]) {
-                    NSMutableDictionary *bodyDictFMF = [parsedFMF mutableCopy];
-                    if ([bodyDictFMF[@"clientContext"] isKindOfClass:[NSDictionary class]]) {
-                        NSMutableDictionary *clientContextFMF = [bodyDictFMF[@"clientContext"] mutableCopy];
-                        clientContextFMF[@"osVersion"] = @"7.0";
-                        clientContextFMF[@"appVersion"] = @"3.0";
-                        bodyDictFMF[@"clientContext"] = clientContextFMF;
-                    }
-                    [bodyDictFMF removeObjectForKey:@"serverContext"];
-                    NSData *reserializedFMF = [NSJSONSerialization dataWithJSONObject:bodyDictFMF options:0 error:nil];
-                    if (reserializedFMF) rewrittenBodyFMF = reserializedFMF;
-                }
-            }
-
-            NSMutableURLRequest *reqFMF = buildForwardedRequest(request.URL, request.HTTPMethod, rewrittenBodyFMF, request);
-
-            NSURLResponse *responseFMF = nil;
-            NSError *errorFMF = nil;
-            NSData *dataFMF = [NSURLConnection sendSynchronousRequest:reqFMF returningResponse:&responseFMF error:&errorFMF];
-            NSHTTPURLResponse *httpResponseFMF = (NSHTTPURLResponse *)responseFMF;
-            if (!httpResponseFMF && dataFMF) {
-                httpResponseFMF = [[NSHTTPURLResponse alloc] initWithURL:request.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-            }
-
-            if (!dataFMF) {
-                NSHTTPURLResponse *failResponseFMF = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:502 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-                [self.client URLProtocol:self didReceiveResponse:failResponseFMF cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-                [self.client URLProtocolDidFinishLoading:self];
-                return;
-            }
-
-            if (dataFMF) {
-                id parsedResp = [NSJSONSerialization JSONObjectWithData:dataFMF options:0 error:nil];
-                if ([parsedResp isKindOfClass:[NSDictionary class]]) {
-                    NSMutableDictionary *respDict = [parsedResp mutableCopy];
-                    if ([respDict[@"serverContext"] isKindOfClass:[NSDictionary class]]) {
-                        NSMutableDictionary *sc = [respDict[@"serverContext"] mutableCopy];
-                        [sc removeObjectForKey:@"authToken"];
-                        [sc removeObjectForKey:@"notificationToken"];
-                        respDict[@"serverContext"] = sc;
-                        NSData *modifiedResp = [NSJSONSerialization dataWithJSONObject:respDict options:0 error:nil];
-                        if (modifiedResp) dataFMF = modifiedResp;
-                    }
-                }
-            }
-
-            [self.client URLProtocol:self didReceiveResponse:httpResponseFMF cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-            [self.client URLProtocol:self didLoadData:dataFMF];
-            [self.client URLProtocolDidFinishLoading:self];
-        }];
-        return;
-    }
 
     if (isAccountSettingsDirect) {
         NSOperationQueue *asQueue = [[NSOperationQueue alloc] init];
@@ -529,52 +467,6 @@ static NSMutableURLRequest *buildForwardedRequest(NSURL *url, NSString *method, 
 
             [self.client URLProtocol:self didReceiveResponse:httpResponseAS cacheStoragePolicy:NSURLCacheStorageNotAllowed];
             [self.client URLProtocol:self didLoadData:dataAS];
-            [self.client URLProtocolDidFinishLoading:self];
-        }];
-        return;
-    }
-
-    if (isFMIPGeneric) {
-        NSOperationQueue *refreshQueue = [[NSOperationQueue alloc] init];
-        [refreshQueue addOperationWithBlock:^{
-            NSData *rewrittenBodyR = request.HTTPBody;
-            if (request.HTTPBody) {
-                id parsedR = [NSJSONSerialization JSONObjectWithData:request.HTTPBody options:0 error:nil];
-                if ([parsedR isKindOfClass:[NSDictionary class]]) {
-                    NSMutableDictionary *bodyDictR = [parsedR mutableCopy];
-                    if ([bodyDictR[@"clientContext"] isKindOfClass:[NSDictionary class]]) {
-                        NSMutableDictionary *clientContextR = [bodyDictR[@"clientContext"] mutableCopy];
-                        clientContextR[@"osVersion"] = @"9.0";
-                        clientContextR[@"appVersion"] = @"5.0";
-                        bodyDictR[@"clientContext"] = clientContextR;
-                        NSData *reserializedR = [NSJSONSerialization dataWithJSONObject:bodyDictR options:0 error:nil];
-                        if (reserializedR) rewrittenBodyR = reserializedR;
-                    }
-                }
-            }
-
-            NSMutableURLRequest *reqR = buildForwardedRequest(request.URL, request.HTTPMethod, rewrittenBodyR, request);
-            if ([request valueForHTTPHeaderField:@"X-Apple-Find-API-Ver"]) {
-                [reqR setValue:@"3.0" forHTTPHeaderField:@"X-Apple-Find-API-Ver"];
-            }
-
-            NSURLResponse *responseR = nil;
-            NSError *errorR = nil;
-            NSData *dataR = [NSURLConnection sendSynchronousRequest:reqR returningResponse:&responseR error:&errorR];
-            NSHTTPURLResponse *httpResponseR = (NSHTTPURLResponse *)responseR;
-            if (!httpResponseR && dataR) {
-                httpResponseR = [[NSHTTPURLResponse alloc] initWithURL:request.URL statusCode:200 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-            }
-
-            if (!dataR) {
-                NSHTTPURLResponse *failResponseR = [[NSHTTPURLResponse alloc] initWithURL:self.request.URL statusCode:502 HTTPVersion:@"HTTP/1.1" headerFields:@{}];
-                [self.client URLProtocol:self didReceiveResponse:failResponseR cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-                [self.client URLProtocolDidFinishLoading:self];
-                return;
-            }
-
-            [self.client URLProtocol:self didReceiveResponse:httpResponseR cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-            [self.client URLProtocol:self didLoadData:dataR];
             [self.client URLProtocolDidFinishLoading:self];
         }];
         return;

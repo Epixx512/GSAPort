@@ -13,3 +13,6 @@ GSAPort_LDFLAGS = $(THEOS_PROJECT_DIR)/openssl/lib/libcrypto.a -framework IOKit 
 GSAPort_FRAMEWORKS = UIKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
+SUBPROJECTS += FMIPRegX
+SUBPROJECTS += FindMyVersionSpoof
+include $(THEOS_MAKE_PATH)/aggregate.mk
