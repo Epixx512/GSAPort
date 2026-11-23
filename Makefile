@@ -8,11 +8,11 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = GSAPort
 
 GSAPort_FILES = Tweak.x polyfill.x
-GSAPort_CFLAGS = -fobjc-arc -isystem /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.0/include/ -Wno-gcc-compat -I$(THEOS_PROJECT_DIR)/openssl/include
+GSAPort_CFLAGS = -fobjc-arc -Wno-gcc-compat -I$(THEOS_PROJECT_DIR)/openssl/include
 GSAPort_LDFLAGS = $(THEOS_PROJECT_DIR)/openssl/lib/libcrypto.a -framework IOKit -framework CFNetwork -lz
 GSAPort_FRAMEWORKS = UIKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
-SUBPROJECTS += FMIPRegX
+SUBPROJECTS += FindMyRegX
 SUBPROJECTS += FindMyVersionSpoof
 include $(THEOS_MAKE_PATH)/aggregate.mk

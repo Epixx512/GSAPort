@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 
-%group FMIPRegX
-%hook AOSFMIPAccount
+%group FindMyRegX
+%hook AOSFindBaseAccount
 
 - (id)apsEnvironmentConstant {
     NSString *raw = [(id)self valueForKey:@"apsEnvironment"];
@@ -17,6 +17,6 @@
 
 %ctor {
 	if (kCFCoreFoundationVersionNumber >= 793.00) {
-		%init(FMIPRegX);
+		%init(FindMyRegX);
 	}
 }
