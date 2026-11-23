@@ -1,6 +1,6 @@
 # GSAPort
 
-A MobileSubstrate tweak that uses an NSURLProtocol subclass to intercept Apple ID related login requests to run them through Apple's GrandSlam Authentication protocol. Works on iOS 6 and iOS 7, iOS 8 fails because it uses the NSURLSession system instead. This allows old iOS versions to get past Apple ID authentication, as they don't natively have GSA.
+A MobileSubstrate tweak that uses an NSURLProtocol subclass to intercept Apple ID related login requests to run them through Apple's GrandSlam Authentication protocol. Works on iOS 6 and iOS 7, iOS 8 fails because it uses the NSURLSession system instead. This allows old iOS versions to get past Apple ID authentication, as they don't natively have GSA. GSAPort also spoofs version for Find My Friends and Find My iPhone. Changes APS Environment for com.apple.Dataclass.Locator so it can register for FMIP.
 
 AI usage: GSAPort is partially AI assisted, with Claude Sonnet 5.5. AI assisted means parts of its code are corrected by AI, while most of the code is still human written. I do have Obj-C experience, and I have throughly checked all AI-touched portions of GSAPort. Most of the SRP algorithm comes from https://github.com/cocagne/pysrp, and AI was used to convert the more complicated components to the C equivalent. This does *NOT* mean the project is vibecoded!!
 
